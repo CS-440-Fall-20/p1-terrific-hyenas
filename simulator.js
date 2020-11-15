@@ -3,31 +3,40 @@ var vertices = [];
 var worldMatrix = new Float32Array(16);
 var faces = [];
 //these are the base colors to be used on the vertices
+var base_colors = 	
+[vec4(1.0, 0.0, 0.0, 1.0), vec4(0.0, 1.0, 0.0, 1.0), vec4(0.0, 0.0, 1.0, 1.0)]
 var colors = [];
 var verts = [];
+var left = -1;
+var right = 1;
+var bottom = -1;
+var topp = 1;
+var near = 0;
+var farr = -10;
 var row_length = 0;
 var col_length = 0;
-var interval = 0.3
+var interval = 0.2
 var flag_count = 1;
 var velocity = 0.01
 var pitchCheck = 0
 var yawCheck = 0
 var rollCheck = 0
+var prevEye = []
 var xmin = -15;
 var xmax = 15;
 var zmin = -15;
 var zmax = 15;
 var xoffset = 12;
 var zoffset = 12;
-var eye = vec3(0,3,0)
-var at = vec3(0,3,100)
-var up = vec3(0,1,0)
-var prevEye = []
-var center = [];
+var shift = false;
+
 
 window.onload = function init() {
     var canvas = document.getElementById("gl-canvas");
 	
+	var X = document.getElementById("Xrotate");
+	var Y = document.getElementById("Yrotate");
+	var Z = document.getElementById("Zrotate");
 	noise.seed(Math.random());
 	
 
@@ -44,7 +53,7 @@ window.onload = function init() {
     var program = initShaders(gl, "vertex-shader", "fragment-shader");
     gl.useProgram(program);
 	
-	get_patch(xmin,xmax,zmin,zmax,noise);
+	get_patch(-12,12,-12,12,noise);
 	
 
 	console.log(colors);
@@ -89,7 +98,9 @@ window.onload = function init() {
 	
 	worldMatrix = rotateY(angle);
 	
-
+	var eye = vec3(0,4,0)
+	var at = vec3(0,4,1)
+	var up = vec3(0,1,0)
 	
 	
 	addEventListener("keydown",function (event) {
@@ -163,20 +174,128 @@ window.onload = function init() {
 		}
 		if (event.keyCode == 38)
 		{
-			if (velocity < 0.02)
+			if (velocity < 0.14)
 			{
-				velocity+=0.001
+				velocity+=0.01
 			}
 		}
 		else if (event.keyCode == 40)
 		{
 			if (velocity > 0)
 			{
-				velocity-=0.001
+				velocity-=0.01
+			}
+		}
+		if (event.keyCode == 16) //Please repeatedly press shift
+		{
+			shift = true
+		}
+		if (event.keyCode == 49)
+		{
+			if (shift == true)
+			{
+				if (left < -0.2)
+				{
+					left += 0.2
+				}
+				shift = false
 			}
 			else
 			{
-				velocity = 0;
+				if (left > -1)
+				{
+					left -=0.2
+				}
+			}
+		}
+		else if (event.keyCode == 50)
+		{
+			if (shift == true)
+			{
+				if (right < 1)
+				{
+					right += 0.2
+				}
+				shift = false
+			}
+			else
+			{
+				if (right > 0.2)
+				{
+					right -=0.2
+				}
+			}
+		}
+		else if (event.keyCode == 51)
+		{
+			if (shift == true)
+			{
+				if (topp < 1)
+				{
+					topp += 0.2
+				}
+				shift = false
+			}
+			else
+			{
+				if (topp > 0.2)
+				{
+					topp -=0.2
+				}
+			}
+		}
+		else if (event.keyCode == 52)
+		{
+			if (shift == true)
+			{
+				if (bottom < -0.2)
+				{
+					bottom += 0.2
+				}
+				shift = false
+			}
+			else
+			{
+				if (bottom > -1)
+				{
+					bottom -=0.2
+				}
+			}
+		}
+		else if (event.keyCode == 53)
+		{
+			if (shift == true)
+			{
+				if (near < 5)
+				{
+					near += 0.2
+				}
+				shift = false
+			}
+			else
+			{
+				if (near > 0)
+				{
+					near -=0.2
+				}
+			}
+		}
+		else if (event.keyCode == 54)
+		{
+			if (shift == true)
+			{
+				if (farr < -20)
+				{
+					farr -= 0.2
+				}
+				shift = false
+			}
+			else
+			{
+				if (farr > -10)
+				{
+					farr +=0.2
+				}
 			}
 		}
 		if (event.key == 'v' || event.key == 'V')
@@ -186,8 +305,9 @@ window.onload = function init() {
 		}
 	});
 	viewMatrix = lookAt(eye,at,up);
-
-	projectionMatrix = perspective(90,canvas.width/canvas.height,0.1,1000.0);
+	topp = 1;
+	orth = ortho( left, right, bottom, topp, near, farr );
+	projectionMatrix = mult(perspective(120,canvas.width/canvas.height,0.1,1000.0), orth);
 	
 	
 	gl.uniformMatrix4fv(worldM, gl.FALSE, flatten(worldMatrix));
@@ -197,16 +317,10 @@ window.onload = function init() {
 	console.log("vertices", vertices);
 	
 	//by default the rotation is set to about the x axis
-	var output = document.getElementById("demo");
-	var output2 = document.getElementById("demo2");
-
 	
 	
 	var loop = function()
 	{
-		//console.log(viewMatrix);
-		output.innerHTML = eye[0];
-		output2.innerHTML = eye[2];
 		gl.clear(gl.COLOR_BUFFER_BIT||gl.DEPTH_BUFFER_BIT);
 		if (flag_count == 2)
 		{
@@ -220,25 +334,29 @@ window.onload = function init() {
 		{
 			gl.drawElements(gl.POINTS,faces.length, gl.UNSIGNED_SHORT,0); //Rendering the triangle
 		}
-		if (eye[1] > 4)
+		if (eye[1] > 10)
 		{
 			velocity = 0
-			eye = prevEye;
+			eye = prevEye
 		}
-		else if (eye[1] < 2)
+		else if (eye[1] < 3)
 		{ 
 			velocity = 0
 			eye = prevEye
 		}
+		viewMatrix = lookAt(eye,at,up);
+		gl.uniformMatrix4fv(viewM, gl.FALSE, flatten(viewMatrix));
 		speed = scale(velocity, normalize(subtract(at, eye)))
-		prevEye = eye;
+		prevEye = eye
 		eye = mult(translate(speed[0],speed[1],speed[2]), vec4(eye[0], eye[1], eye[2], 1))
 		eye = vec3(eye[0], eye[1], eye[2])
 		at = mult(translate(speed[0],speed[1],speed[2]), vec4(at[0], at[1], at[2], 1))
 		at = vec3(at[0], at[1], at[2])
-		viewMatrix = lookAt(eye,at,up);
 		gl.uniformMatrix4fv(viewM, gl.FALSE, flatten(viewMatrix));
-
+		orth = ortho( left, right, bottom, topp, near, farr )
+		projectionMatrix = mult(perspective(120,canvas.width/canvas.height,0.1,1000.0), orth);
+		gl.uniformMatrix4fv(projectionM, gl.FALSE, flatten(projectionMatrix));
+		//console.log("here");
 		if ((Math.abs(eye[0] - xmin) < xoffset/2) || (Math.abs(eye[0] - xmax) < xoffset/2) || (Math.abs(eye[2] - zmin) < zoffset/2) || (Math.abs(eye[2] - zmax) < zoffset/2))
 		{
 			xmin = eye[0] - xoffset;
@@ -262,8 +380,6 @@ window.onload = function init() {
 			gl.bindBuffer(gl.ARRAY_BUFFER, color_buffer);
 			gl.bufferData(gl.ARRAY_BUFFER, flatten(colors), gl.STATIC_DRAW);
 		}
-		
-		//console.log("here");
 		requestAnimationFrame(loop);
 	}
 	requestAnimationFrame(loop);
@@ -327,11 +443,7 @@ function make_vertices(xmin,xmax,zmin,zmax,noise)
 	var x;
 	var z;
 	var y;
-/* 	alert(eye);
-	alert(at);
-	alert(up); */
-	//vertices = new array();
-	console.log((xmax + xmin) / 2);
+	
 	col_length = 0;
 	row_length = 0;
 	for (var i  = xmin; i <= xmax; i+= interval)
