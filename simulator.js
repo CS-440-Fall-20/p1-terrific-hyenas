@@ -3,25 +3,31 @@ var vertices = [];
 var worldMatrix = new Float32Array(16);
 var faces = [];
 //these are the base colors to be used on the vertices
-var base_colors = 	
-[vec4(1.0, 0.0, 0.0, 1.0), vec4(0.0, 1.0, 0.0, 1.0), vec4(0.0, 0.0, 1.0, 1.0)]
 var colors = [];
 var verts = [];
 var row_length = 0;
 var col_length = 0;
-var interval = 0.2
+var interval = 0.3
 var flag_count = 1;
 var velocity = 0.01
 var pitchCheck = 0
 var yawCheck = 0
 var rollCheck = 0
+var xmin = -15;
+var xmax = 15;
+var zmin = -15;
+var zmax = 15;
+var xoffset = 12;
+var zoffset = 12;
+var eye = vec3(0,3,0)
+var at = vec3(0,3,100)
+var up = vec3(0,1,0)
+var prevEye = []
+var center = [];
 
 window.onload = function init() {
     var canvas = document.getElementById("gl-canvas");
 	
-	var X = document.getElementById("Xrotate");
-	var Y = document.getElementById("Yrotate");
-	var Z = document.getElementById("Zrotate");
 	noise.seed(Math.random());
 	
 
@@ -38,7 +44,7 @@ window.onload = function init() {
     var program = initShaders(gl, "vertex-shader", "fragment-shader");
     gl.useProgram(program);
 	
-	get_patch(-12,12,-12,12,noise);
+	get_patch(xmin,xmax,zmin,zmax,noise);
 	
 
 	console.log(colors);
@@ -83,9 +89,7 @@ window.onload = function init() {
 	
 	worldMatrix = rotateY(angle);
 	
-	var eye = vec3(0,3,0)
-	var at = vec3(0,3,1)
-	var up = vec3(0,1,0)
+
 	
 	
 	addEventListener("keydown",function (event) {
@@ -159,16 +163,20 @@ window.onload = function init() {
 		}
 		if (event.keyCode == 38)
 		{
-			if (velocity < 0.14)
+			if (velocity < 0.02)
 			{
-				velocity+=0.01
+				velocity+=0.001
 			}
 		}
 		else if (event.keyCode == 40)
 		{
 			if (velocity > 0)
 			{
-				velocity-=0.01
+				velocity-=0.001
+			}
+			else
+			{
+				velocity = 0;
 			}
 		}
 		if (event.key == 'v' || event.key == 'V')
@@ -179,7 +187,7 @@ window.onload = function init() {
 	});
 	viewMatrix = lookAt(eye,at,up);
 
-	projectionMatrix = perspective(120,canvas.width/canvas.height,0.1,1000.0);
+	projectionMatrix = perspective(90,canvas.width/canvas.height,0.1,1000.0);
 	
 	
 	gl.uniformMatrix4fv(worldM, gl.FALSE, flatten(worldMatrix));
@@ -189,10 +197,16 @@ window.onload = function init() {
 	console.log("vertices", vertices);
 	
 	//by default the rotation is set to about the x axis
+	var output = document.getElementById("demo");
+	var output2 = document.getElementById("demo2");
+
 	
 	
 	var loop = function()
 	{
+		//console.log(viewMatrix);
+		output.innerHTML = eye[0];
+		output2.innerHTML = eye[2];
 		gl.clear(gl.COLOR_BUFFER_BIT||gl.DEPTH_BUFFER_BIT);
 		if (flag_count == 2)
 		{
@@ -209,21 +223,45 @@ window.onload = function init() {
 		if (eye[1] > 4)
 		{
 			velocity = 0
-			eye[1] -= 0.1
+			eye = prevEye;
 		}
 		else if (eye[1] < 2)
 		{ 
 			velocity = 0
-			eye[1] += 0.1
+			eye = prevEye
 		}
-		viewMatrix = lookAt(eye,at,up);
-		gl.uniformMatrix4fv(viewM, gl.FALSE, flatten(viewMatrix));
 		speed = scale(velocity, normalize(subtract(at, eye)))
+		prevEye = eye;
 		eye = mult(translate(speed[0],speed[1],speed[2]), vec4(eye[0], eye[1], eye[2], 1))
 		eye = vec3(eye[0], eye[1], eye[2])
 		at = mult(translate(speed[0],speed[1],speed[2]), vec4(at[0], at[1], at[2], 1))
 		at = vec3(at[0], at[1], at[2])
+		viewMatrix = lookAt(eye,at,up);
 		gl.uniformMatrix4fv(viewM, gl.FALSE, flatten(viewMatrix));
+
+		if ((Math.abs(eye[0] - xmin) < xoffset/2) || (Math.abs(eye[0] - xmax) < xoffset/2) || (Math.abs(eye[2] - zmin) < zoffset/2) || (Math.abs(eye[2] - zmax) < zoffset/2))
+		{
+			xmin = eye[0] - xoffset;
+			xmax = eye[0] + xoffset;
+			zmin = eye[2] - zoffset;
+			zmax = eye[2] + zoffset;
+			console.log("xmin", xmin)
+			console.log("xmax", xmax)
+			console.log("zmin", zmin)
+			console.log("zmax", zmax)
+			vertices = []
+			faces = []
+			colors = []
+			get_patch(xmin,xmax,zmin,zmax,noise);
+			gl.bindBuffer(gl.ARRAY_BUFFER, vertex_buffer);
+			gl.bufferData(gl.ARRAY_BUFFER, flatten(vertices), gl.STATIC_DRAW);
+	
+			gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, vertex_index_buffer);
+			gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(faces),gl.STATIC_DRAW)
+
+			gl.bindBuffer(gl.ARRAY_BUFFER, color_buffer);
+			gl.bufferData(gl.ARRAY_BUFFER, flatten(colors), gl.STATIC_DRAW);
+		}
 		
 		//console.log("here");
 		requestAnimationFrame(loop);
@@ -246,6 +284,7 @@ function get_patch(xmin,xmax,zmin,zmax,noise)
 //Setting the colors of the vertices.
 function Make_colors(vertices)
 {
+	colors = []
 	colors = [Color_interpolation(vertices[0][1])]
 	for (var i = 1; i < vertices.length; i++)
 	{
@@ -288,8 +327,13 @@ function make_vertices(xmin,xmax,zmin,zmax,noise)
 	var x;
 	var z;
 	var y;
-	
-
+/* 	alert(eye);
+	alert(at);
+	alert(up); */
+	//vertices = new array();
+	console.log((xmax + xmin) / 2);
+	col_length = 0;
+	row_length = 0;
 	for (var i  = xmin; i <= xmax; i+= interval)
 	{
 		col_length++
@@ -314,7 +358,7 @@ function make_vertices(xmin,xmax,zmin,zmax,noise)
 
 function make_faces(vertices)
 {
-
+	faces = []
 	for (var i = 0; i < col_length - 1; i++)
 	{
 		for (var j = 0; j < row_length - 1; j++)
