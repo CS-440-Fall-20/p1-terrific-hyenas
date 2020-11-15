@@ -7,9 +7,10 @@ var base_colors =
 [vec4(1.0, 0.0, 0.0, 1.0), vec4(0.0, 1.0, 0.0, 1.0), vec4(0.0, 0.0, 1.0, 1.0)]
 var colors = [];
 var verts = [];
+var row_length = 0;
+var col_length = 0;
+var interval = 0.2
 var flag_count = 1;
-
-
 
 
 
@@ -35,11 +36,10 @@ window.onload = function init() {
     var program = initShaders(gl, "vertex-shader", "fragment-shader");
     gl.useProgram(program);
 	
-	get_patch(-10,10,-10,10,noise);
+	get_patch(-12,12,-12,12,noise);
 	
 
 	console.log(colors);
-	console.log(vertices);
 	console.log("colorlength",colors.length);
 	console.log("num faces",faces.length);
 	console.log("faces",faces);
@@ -117,6 +117,7 @@ window.onload = function init() {
 			flag_count++
 			flag_count = flag_count % 3;
 		}
+		
 	});
 
 	viewMatrix = lookAt(eye,at,up);
@@ -136,8 +137,6 @@ window.onload = function init() {
 	var loop = function()
 	{
 		gl.clear(gl.COLOR_BUFFER_BIT||gl.DEPTH_BUFFER_BIT);
-		
-		gl.uniformMatrix4fv(viewM, gl.FALSE, flatten(viewMatrix));
 		if (flag_count == 2)
 		{
 			gl.drawElements(gl.TRIANGLES,faces.length, gl.UNSIGNED_SHORT,0); //Rendering the triangle
@@ -150,6 +149,8 @@ window.onload = function init() {
 		{
 			gl.drawElements(gl.POINTS,faces.length, gl.UNSIGNED_SHORT,0); //Rendering the triangle
 		}
+		
+		gl.uniformMatrix4fv(viewM, gl.FALSE, flatten(viewMatrix));
 		//console.log("here");
 		requestAnimationFrame(loop);
 	}
@@ -163,21 +164,20 @@ window.onload = function init() {
 function get_patch(xmin,xmax,zmin,zmax,noise)
 {
 	make_vertices(xmin,xmax,zmin,zmax,noise)
-	var boxes = make_boxes(verts);
-	make_faces(boxes);
+	//var boxes = make_boxes(verts);
+	make_faces(vertices);
 	Make_colors(vertices);
 }
 
 //Setting the colors of the vertices.
 function Make_colors(vertices)
 {
-	colors = [Color_interpolation(vertices[0][1]), Color_interpolation(vertices[1][1]),Color_interpolation(vertices[2][1])]
-	for (var i = 3; i < vertices.length; i = i + 3)
+	colors = [Color_interpolation(vertices[0][1])]
+	for (var i = 1; i < vertices.length; i++)
 	{
 		//console.log(vertices[i][1]);
-		colors = colors.concat([Color_interpolation(vertices[i][1]),Color_interpolation(vertices[i+1][1]),Color_interpolation(vertices[i+2][1])]);
+		colors = colors.concat([Color_interpolation(vertices[i][1])]);
 	}
-	console.log(colors);
 }
 
 function Color_interpolation(y)
@@ -215,50 +215,43 @@ function make_vertices(xmin,xmax,zmin,zmax,noise)
 	var z;
 	var y;
 	
-	for (var i  = xmin; i <= xmax; i+= 0.5)
+
+	for (var i  = xmin; i <= xmax; i+= interval)
 	{
-		innerarray = new Array();
-		for (var j = zmin; j <= zmax; j+= 0.5)
+		col_length++
+		row_length = 0;
+		for (var j = zmin; j <= zmax; j+= interval)
 		{
+			row_length++
 			x = i;
 			z = j;
 			y = noise.perlin2(i/2,j/2)*2
 			if (y < 0)
 			{
-				y = -0.2
+				y = -0.1;
 			}
-			innerarray.push(vec4(x,y,z,1))
+			vertices.push(vec4(x,y,z,1))
 		}
-		verts.push(innerarray);
 	}
-	console.log(verts);
+	console.log(row_length)
+	console.log(col_length)
+	console.log(vertices);
 }
 
-
-function make_boxes(verts)
+function make_faces(vertices)
 {
-	var boxes = new Array()
-	for (var i = 0; i < verts.length - 1; i++)
+
+	for (var i = 0; i < col_length - 1; i++)
 	{
-		for (var j = 0; j < verts.length - 1; j++)
+		for (var j = 0; j < row_length - 1; j++)
 		{
-			boxes.push([verts[i][j],verts[i+1][j],verts[i][j+1],verts[i+1][j+1]])
+			faces.push(row_length* i + j)
+			faces.push(row_length* i + j + 1)
+			faces.push(row_length*(i + 1) + j)
+			faces.push(row_length* i + j + 1)
+			faces.push(row_length*(i + 1) +1 + j)
+			faces.push(row_length*(i + 1) + j)
 		}
 	}
-	console.log("boxes: ",boxes.length);
-	return boxes;
-}
-
-function make_faces(boxes)
-{
-	for (var i = 0; i < boxes.length; i++)
-	{
-		vertices.push(boxes[i][0],boxes[i][1],boxes[i][2]);
-		vertices.push(boxes[i][1],boxes[i][2],boxes[i][3]);
-	}
-	for (var i = 0; i < vertices.length; i++)
-	{
-		faces.push(i);
-	}
-	console.log(faces.length);
+	
 }
