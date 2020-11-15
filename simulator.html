@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <script id="vertex-shader" type="x-shader/x-vertex">
+        attribute vec4 vPosition; 
+		attribute vec4 vColor; 
+		varying vec4 fragColor; 
+		uniform mat4 worldM;
+		uniform mat4 viewM;
+		uniform mat4 projectionM;
+		void main() 
+		{ 
+			gl_Position = projectionM * viewM * worldM * vPosition; 
+			gl_PointSize = 1.0; 
+			fragColor = vColor; 
+		}
+    </script>
+
+    <script id="fragment-shader" type="x-shader/x-fragment">
+        precision mediump float; 
+		varying vec4 fragColor; 
+		void main() { gl_FragColor = fragColor; }
+    </script>
+
+    <script type="text/javascript" src="https://www.cs.unm.edu/~angel/BOOK/INTERACTIVE_COMPUTER_GRAPHICS/SEVENTH_EDITION/CODE/Common/webgl-utils.js"></script>
+    <script type="text/javascript" src="https://www.cs.unm.edu/~angel/BOOK/INTERACTIVE_COMPUTER_GRAPHICS/SEVENTH_EDITION/CODE/Common/initShaders.js"></script>
+    <script type="text/javascript" src="https://www.cs.unm.edu/~angel/BOOK/INTERACTIVE_COMPUTER_GRAPHICS/SEVENTH_EDITION/CODE/Common/MV.js"></script>
+    <script type="text/javascript" src="simulator.js"></script>
+	<script type="text/javascript" src="perlin.js"></script>
+	
+</head>
+
+<body>
+    <canvas id="gl-canvas" width="800" height="800">
+Oops ... your browser doesn't support the HTML5 canvas element
+</canvas>
+
+
+
+
+</body>
+
+</html>
