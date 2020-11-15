@@ -11,8 +11,10 @@ var row_length = 0;
 var col_length = 0;
 var interval = 0.2
 var flag_count = 1;
-
-
+var velocity = 0.01
+var pitchCheck = 0
+var yawCheck = 0
+var rollCheck = 0
 
 window.onload = function init() {
     var canvas = document.getElementById("gl-canvas");
@@ -80,49 +82,104 @@ window.onload = function init() {
 	angle = performance.now() / 1000 / 6 * 2 * Math.PI;
 	
 	worldMatrix = rotateY(angle);
-	var eye = vec3(0,4,3)
-	var at = vec3(0,4,2)
-	var up = vec3(0,5,3)
 	
-	viewMatrix = lookAt(eye,at,up);
-	addEventListener("keypress",function (event) {
+	var eye = vec3(0,3,0)
+	var at = vec3(0,3,1)
+	var up = vec3(0,1,0)
+	
+	
+	addEventListener("keydown",function (event) {
 		if (event.key == 'w' || event.key == 'W')
 		{
-			//console.log("pressed")
-			viewMatrix = mult(rotate(5, cross(up, at)), viewMatrix )
+			if (pitchCheck >= -90)
+			{
+				up = mult( rotate(-5, cross(up, subtract(at, eye))), vec4(up[0], up[1], up[2], 1))
+				up = vec3(up[0], up[1], up[2])
+				tempat = subtract(at, eye)
+				rotat = mult( rotate(-5, cross(up, subtract(at, eye))), vec4(tempat[0], tempat[1], tempat[2], 1))
+				at = add(eye, vec3(rotat[0], rotat[1], rotat[2]))
+				pitchCheck += -5
+			}
 		    
 		}
 		else if (event.key == 's' || event.key == 'S')
 		{
-			viewMatrix = mult(rotate(-5, cross(up, at)), viewMatrix )
+			if (pitchCheck <= 90)
+			{
+				up = mult( rotate(5, cross(up, subtract(at, eye))), vec4(up[0], up[1], up[2], 1))
+				up = vec3(up[0], up[1], up[2])
+				tempat = subtract(at, eye)
+				rotat = mult( rotate(5, cross(up, subtract(at, eye))), vec4(tempat[0], tempat[1], tempat[2], 1))
+				at = add(eye, vec3(rotat[0], rotat[1], rotat[2]))
+				pitchCheck += 5
+			}
+			//viewMatrix = mult(viewMatrix, rotate(-5, cross(up, subtract(at, eye))) )
 		}
 		else if (event.key == 'a' || event.key == 'D')
 		{
-			viewMatrix = mult(rotate(-5, subtract(up, eye)), viewMatrix )
+			if (yawCheck <= 90)
+			{
+				tempat = subtract(at, eye)
+				rotat = mult( rotate(5, up), vec4(tempat[0], tempat[1], tempat[2], 1))
+				at = add(eye, vec3(rotat[0], rotat[1], rotat[2]))
+				yawCheck += 5
+			}
+			//viewMatrix = mult(viewMatrix, rotate(-5, up) )
 		}
 		else if (event.key == 'd' || event.key == 'D')
 		{
-			viewMatrix = mult(rotate(5, subtract(up, eye)), viewMatrix )
+			if (yawCheck >= -90)
+			{
+				tempat = subtract(at, eye)
+				rotat = mult( rotate(-5, up), vec4(tempat[0], tempat[1], tempat[2], 1))
+				at = add(eye, vec3(rotat[0], rotat[1], rotat[2]))
+				yawCheck +=-5
+			}
+			//viewMatrix = mult(viewMatrix, rotate(5, up))
 		}
 		else if (event.key == 'q' || event.key == 'Q')
 		{
-			viewMatrix = mult(rotate(5, subtract(at, eye)), viewMatrix )
+			if (rollCheck >= -90)
+			{
+				up = mult( rotate(-5, subtract(at, eye)), vec4(up[0], up[1], up[2], 1))
+				up = vec3(up[0], up[1], up[2])
+				rollCheck += -5
+			}
+			//viewMatrix = mult(viewMatrix, rotate(5, subtract(at, eye)) )
 		}
 		else if (event.key == 'e' || event.key == 'e')
 		{
-			viewMatrix = mult(rotate(-5, subtract(at, eye)), viewMatrix )
+			if (rollCheck <= 90)
+			{
+				up = mult( rotate(5, subtract(at, eye)), vec4(up[0], up[1], up[2], 1))
+				up = vec3(up[0], up[1], up[2])
+				rollCheck += 5 
+			}
+			//viewMatrix = mult( viewMatrix , rotate(-5, subtract(at, eye)))
+		}
+		if (event.keyCode == 38)
+		{
+			if (velocity < 0.14)
+			{
+				velocity+=0.01
+			}
+		}
+		else if (event.keyCode == 40)
+		{
+			if (velocity > 0)
+			{
+				velocity-=0.01
+			}
 		}
 		if (event.key == 'v' || event.key == 'V')
 		{
 			flag_count++
 			flag_count = flag_count % 3;
 		}
-		
 	});
-
 	viewMatrix = lookAt(eye,at,up);
 
-	projectionMatrix = perspective(45,canvas.width/canvas.height,0.1,1000.0);
+	projectionMatrix = perspective(120,canvas.width/canvas.height,0.1,1000.0);
 	
 	
 	gl.uniformMatrix4fv(worldM, gl.FALSE, flatten(worldMatrix));
@@ -149,8 +206,25 @@ window.onload = function init() {
 		{
 			gl.drawElements(gl.POINTS,faces.length, gl.UNSIGNED_SHORT,0); //Rendering the triangle
 		}
-		
+		if (eye[1] > 4)
+		{
+			velocity = 0
+			eye[1] -= 0.1
+		}
+		else if (eye[1] < 2)
+		{ 
+			velocity = 0
+			eye[1] += 0.1
+		}
+		viewMatrix = lookAt(eye,at,up);
 		gl.uniformMatrix4fv(viewM, gl.FALSE, flatten(viewMatrix));
+		speed = scale(velocity, normalize(subtract(at, eye)))
+		eye = mult(translate(speed[0],speed[1],speed[2]), vec4(eye[0], eye[1], eye[2], 1))
+		eye = vec3(eye[0], eye[1], eye[2])
+		at = mult(translate(speed[0],speed[1],speed[2]), vec4(at[0], at[1], at[2], 1))
+		at = vec3(at[0], at[1], at[2])
+		gl.uniformMatrix4fv(viewM, gl.FALSE, flatten(viewMatrix));
+		
 		//console.log("here");
 		requestAnimationFrame(loop);
 	}
