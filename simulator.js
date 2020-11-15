@@ -7,6 +7,7 @@ var base_colors =
 [vec4(1.0, 0.0, 0.0, 1.0), vec4(0.0, 1.0, 0.0, 1.0), vec4(0.0, 0.0, 1.0, 1.0)]
 var colors = [];
 var verts = [];
+var flag_count = 1;
 
 
 
@@ -111,6 +112,11 @@ window.onload = function init() {
 		{
 			viewMatrix = mult(rotate(-5, subtract(at, eye)), viewMatrix )
 		}
+		if (event.key == 'v' || event.key == 'V')
+		{
+			flag_count++
+			flag_count = flag_count % 3;
+		}
 	});
 
 	viewMatrix = lookAt(eye,at,up);
@@ -132,7 +138,18 @@ window.onload = function init() {
 		gl.clear(gl.COLOR_BUFFER_BIT||gl.DEPTH_BUFFER_BIT);
 		
 		gl.uniformMatrix4fv(viewM, gl.FALSE, flatten(viewMatrix));
-		gl.drawElements(gl.LINES,faces.length, gl.UNSIGNED_SHORT,0);
+		if (flag_count == 2)
+		{
+			gl.drawElements(gl.TRIANGLES,faces.length, gl.UNSIGNED_SHORT,0); //Rendering the triangle
+		}
+		if (flag_count == 1)
+		{
+			gl.drawElements(gl.LINES,faces.length, gl.UNSIGNED_SHORT,0); //Rendering the triangle
+		}
+		if (flag_count == 0)
+		{
+			gl.drawElements(gl.POINTS,faces.length, gl.UNSIGNED_SHORT,0); //Rendering the triangle
+		}
 		//console.log("here");
 		requestAnimationFrame(loop);
 	}
