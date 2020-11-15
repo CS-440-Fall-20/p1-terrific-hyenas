@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <script id="vertex-shader" type="x-shader/x-vertex">
+        attribute vec4 vPosition; 
+		attribute vec4 vColor; 
+		varying vec4 fragColor; 
+		uniform mat4 worldM;
+		uniform mat4 viewM;
+		uniform mat4 projectionM;
+		void main() 
+		{ 
+			gl_Position = projectionM * viewM * worldM * vPosition; 
+			gl_PointSize = 1.0; 
+			fragColor = vColor; 
+		}
+    </script>
+
+    <script id="fragment-shader" type="x-shader/x-fragment">
+        precision mediump float; 
+		varying vec4 fragColor; 
+		void main() { gl_FragColor = fragColor; }
+    </script>
+
+    <script type="text/javascript" src="https://www.cs.unm.edu/~angel/BOOK/INTERACTIVE_COMPUTER_GRAPHICS/SEVENTH_EDITION/CODE/Common/webgl-utils.js"></script>
+    <script type="text/javascript" src="https://www.cs.unm.edu/~angel/BOOK/INTERACTIVE_COMPUTER_GRAPHICS/SEVENTH_EDITION/CODE/Common/initShaders.js"></script>
+    <script type="text/javascript" src="https://www.cs.unm.edu/~angel/BOOK/INTERACTIVE_COMPUTER_GRAPHICS/SEVENTH_EDITION/CODE/Common/MV.js"></script>
+    <script type="text/javascript" src="project.js"></script>
+	<script type="text/javascript" src="perlin.js"></script>
+	
+</head>
+
+<body>
+    <canvas id="gl-canvas" width="512" height="512">
+Oops ... your browser doesn't support the HTML5 canvas element
+</canvas>
+<style>
+.slidecontainer {
+  width: 512px;
+}
+
+.slider {
+  -webkit-appearance: none;
+  width: 512px;
+  height: 25px;
+  background: #d3d3d3;
+  outline: none;
+  opacity: 0.7;
+  -webkit-transition: .2s;
+  transition: opacity .2s;
+}
+
+.slider:hover {
+  opacity: 1;
+}
+
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 25px;
+  height: 25px;
+  background: #4CAF50;
+  cursor: pointer;
+}
+
+.slider::-moz-range-thumb {
+  width: 25px;
+  height: 25px;
+  background: #4CAF50;
+  cursor: pointer;
+}
+</style>
+
+<div class="slidecontainer">
+  <input type="range" min="1" max="6" value="1" class="slider" id="myRange">
+  <p style="font-family:'Courier New', Courier, monospace;color: black;">n_t: <span id="demo"></span></p>
+</div>
+
+<button id = "Xrotate" >Rotate X axis</button>
+<button id = "Yrotate" >Rotate Y axis</button>
+<button id = "Zrotate" >Rotate Z axis</button>
+
+</body>
+
+</html>
